@@ -1,6 +1,7 @@
 package com.dirkmoors;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -19,7 +20,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.dirkmoors.BloomFilter;
 import com.dirkmoors.BloomFilter.Result;
 
 public class BloomFilterTest {
@@ -32,7 +32,7 @@ public class BloomFilterTest {
 		"Idaho Illinois Indiana Iowa Kansas Kentucky Louisiana " +
 		"Maine Maryland Massachusetts Michigan Minnesota " +
 		"Mississippi Missouri Montana Nebraska Nevada " +
-		"NewHampshire NewJersey NewMexico NewYork NorthCarolina" +
+		"NewHampshire NewJersey NewMexico NewYork NorthCarolina " +
 		"NorthDakota Ohio Oklahoma Oregon Pennsylvania RhodeIsland " +
 		"SouthCarolina SouthDakota Tennessee Texas Utah Vermont " +
 		"Virginia Washington WestVirginia Wisconsin Wyoming"
@@ -43,7 +43,7 @@ public class BloomFilterTest {
 	
 	@After
 	public void tearDown(){}	
-	
+		
 	@Test
 	public void testContents(){		
 		BloomFilter bf = new BloomFilter(1000000, 0.001);
@@ -82,20 +82,20 @@ public class BloomFilterTest {
 		testBloomfilterContents(bf2, states);
 	}
 	
-//	@Test
-//	public void testJsonFromPythonLib() throws IOException, DataFormatException{
-//		BloomFilter bf = new BloomFilter(1000, 0.001);
-//		for(String state: states){
-//			bf.add(state);
-//		}
-//		
-//		String jsonFromPythonLib = readFile("res/test/jsonFromPythonLib.json", 
-//				Charset.defaultCharset());
-//		
-//		BloomFilter bf2 = BloomFilter.fromJSON(jsonFromPythonLib);		
-//		assertArrayEquals(bf2.getData(), bf.getData());
-//		//testBloomfilterContents(bf2, states);
-//	}
+	@Test
+	public void testJsonFromPythonLib() throws IOException, DataFormatException{
+		BloomFilter bf = new BloomFilter(100000, 0.001);
+		for(String state: states){
+			bf.add(state);
+		}
+		
+		String jsonFromPythonLib = readFile("res/test/jsonFromPythonLib.json", 
+				Charset.defaultCharset());
+		
+		BloomFilter bf2 = BloomFilter.fromJSON(jsonFromPythonLib);		
+		assertArrayEquals(bf2.getData(), bf.getData());
+		testBloomfilterContents(bf2, states);
+	}
 	
 	private void testBloomfilterContents(BloomFilter bf, String[] expectedContents){
 		for(String candidate: expectedContents){
@@ -155,6 +155,6 @@ public class BloomFilterTest {
 			  throws IOException 
 	{
 		byte[] encoded = Files.readAllBytes(Paths.get(path));
-		return encoding.decode(ByteBuffer.wrap(encoded)).toString();
+		return encoding.decode(ByteBuffer.wrap(encoded)).toString().trim();
 	}
 }

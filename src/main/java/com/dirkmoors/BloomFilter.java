@@ -2,13 +2,14 @@ package com.dirkmoors;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.util.Random;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -27,13 +28,19 @@ public class BloomFilter {
 	private int numWords;
 	private long[] data;	
 	
+	private IBloomFilterProbeGenerator probeGenerator;
+	
 	public BloomFilter(){}
 	
 	public BloomFilter(long idealNumElementsN, double errorRateP) {
 		this(idealNumElementsN, errorRateP, null);
 	}
 	
-	public BloomFilter(long idealNumElementsN, double errorRateP, long[] data) {
+	public BloomFilter(long idealNumElementsN, double errorRateP, IBloomFilterProbeGenerator probeGenerator) {
+		this(idealNumElementsN, errorRateP, probeGenerator, null);
+	}
+	
+	public BloomFilter(long idealNumElementsN, double errorRateP, IBloomFilterProbeGenerator probeGenerator, long[] data) {
 		if(idealNumElementsN <= 0){
 			throw new IllegalArgumentException("idealNumElementsN must be > 0");
 		}
@@ -52,16 +59,12 @@ public class BloomFilter {
 		
 		this.numWords = BloomFilter.calculateNumWords(this.numBitsM);
 		
+		this.probeGenerator = (
+				probeGenerator != null ? 
+						probeGenerator : 
+						new MersennesProbeGenerator());
+		
 		this.data = data != null ? data : new long[this.numWords];
-	}
-	
-	public long[] getProbes(String data){
-		Random r = new Random(data.hashCode());
-		long[] probes = new long[this.numProbesK];
-		for(int i = 0; i < probes.length; i++){
-			probes[i] = (long)(r.nextDouble() * this.numWords);
-		}
-		return probes;
 	}
 	
 	public long[] getData(){
@@ -84,12 +87,18 @@ public class BloomFilter {
 		return this.numBitsM;
 	}
 	
-	public void add(String key){
-		long[] probes = getProbes(key);
-		
-		for(long i : probes){
-			int bitIndex = (int)Math.floor(i / 8);
-			this.data[bitIndex] |= (long)Math.pow(2, (i % 8));
+	public void add(String key){		
+		BigInteger[] probes = this.probeGenerator.getProbes(this.numProbesK, this.numBitsM, key);		
+		for(BigInteger bitno : probes){
+			BigInteger[] dm = divmod(bitno, BigInteger.valueOf(32));
+			BigInteger wordno = dm[0];
+			BigInteger bitWithinWordno = dm[1];			
+			BigInteger mask = BigInteger.valueOf(1).shiftLeft(bitWithinWordno.intValue());	
+			
+			int index = wordno.intValue();
+			long maskVal = mask.longValue();
+			
+			this.data[index] |= maskVal;
 		}
 	}
 	
@@ -122,11 +131,16 @@ public class BloomFilter {
 	}
 	
 	public Result contains(String key){
-		long[] probes = this.getProbes(key);
-		
-		for(long i : probes){
-			int bitIndex = (int)Math.floor(i / 8);
-			if((this.data[bitIndex] & (long)Math.pow(2, (i % 8))) == 0){			
+		BigInteger[] probes = this.probeGenerator.getProbes(this.numProbesK, this.numBitsM, key);		
+		for(BigInteger bitno : probes){
+			BigInteger[] dm = divmod(bitno, BigInteger.valueOf(32));
+			BigInteger wordno = dm[0];
+			BigInteger bitWithinWordno = dm[1];			
+			BigInteger mask = BigInteger.valueOf(1).shiftLeft(bitWithinWordno.intValue());	
+			
+			int index = wordno.intValue();
+			long maskVal = mask.longValue();
+			if((this.data[index] & maskVal) == 0){
 				return Result.NO;
 			}
 		}
@@ -137,32 +151,25 @@ public class BloomFilter {
 		return toJSON(true);
 	}
 	
-	public String toJSON(boolean compressed) throws JSONException, IOException{
+	public String toJSON(boolean compressed) throws JSONException, IOException{		
+		byte[] dataBytes = longArrayToByteArray(data);
+		
+		String dataHash = hash(dataBytes);
+		
+		if(compressed){
+			dataBytes = zlibCompress(dataBytes);
+		}
+		byte[] b64bytes = Base64.encodeBase64(dataBytes);	
+		String b64data = new String(b64bytes);
+		
 		JSONObject result = new JSONObject();		
 		result.put("v", BloomFilter.VERSION);
 		result.put("n", getIdealNumberOfElements());
 		result.put("p", getErrorRate());
 		result.put("zlib", compressed);
-		result.put("data", getB64Data(compressed));
+		result.put("data", b64data);
+		result.put("hash", dataHash);
 		return result.toString();
-	}
-	
-	private String getB64Data(boolean zlibCompressed) throws IOException{		
-		byte[] bytes = longArrayToByteArray(data);
-		if(zlibCompressed){
-			bytes = zlibCompress(bytes);
-		}
-		byte[] b64bytes = Base64.encodeBase64(bytes);	
-		return new String(b64bytes);
-	}
-	
-	private void setB64Data(String b64data, boolean zlibCompressed) throws IOException, DataFormatException{
-		byte[] bytes = Base64.decodeBase64(b64data);
-		if(zlibCompressed){
-			bytes = zlibDecompress(bytes);
-		}		
-		long[] data	= byteArrayToLongArray(bytes);
-		this.data = data;
 	}
 	
 	public static BloomFilter fromJSON(String jsonString) throws IOException, DataFormatException{
@@ -172,8 +179,9 @@ public class BloomFilter {
 		double errorRateP = data.optDouble("p", -1);
 		boolean compressed = data.optBoolean("zlib");
 		String b64data = data.optString("data", null);
+		String dataHash = data.optString("hash", null);
 		
-		if(version == null || idealNumElementsN == -1 || errorRateP == -1 || b64data == null){
+		if(version == null || idealNumElementsN == -1 || errorRateP == -1 || b64data == null || dataHash == null){
 			throw new IllegalArgumentException("Invalid BloomFilter JSON structure");
 		}
 		
@@ -181,10 +189,34 @@ public class BloomFilter {
 			throw new IllegalArgumentException("Incompatible BloomFilter version");
 		}
 		
+		byte[] rawdata = Base64.decodeBase64(b64data);
+		if(compressed){
+			rawdata = zlibDecompress(rawdata);
+		}
+				
+		String newDataHash = hash(rawdata);
+		
+		if(!newDataHash.equals(dataHash)){
+			throw new IllegalArgumentException("Data integrity error");
+		}
+		
+		long[] longdata	= byteArrayToLongArray(rawdata);
+		
 		BloomFilter newBloomFilter = new BloomFilter(idealNumElementsN, errorRateP);
-		newBloomFilter.setB64Data(b64data, compressed);
+		newBloomFilter.data = longdata;
 		
 		return newBloomFilter;
+	}
+	
+	private static String hash(byte[] bytes){
+		return DigestUtils.sha256Hex(bytes);
+	}
+	
+	private static BigInteger[] divmod(BigInteger x, BigInteger y){
+		//Return the tuple ((x-x%y)/y, x%y).  Invariant: div*y + mod == x.				
+		BigInteger a = (x.subtract(x.mod(y))).divide(y);
+		BigInteger b = x.mod(y);		
+		return new BigInteger[]{a, b};		
 	}
 	
 	private static byte[] longArrayToByteArray(long[] data){
