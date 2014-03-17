@@ -133,6 +133,10 @@ public class BloomFilter {
 		return Result.MAYBE;
 	}
 	
+	public String toJSON() throws JSONException, IOException{
+		return toJSON(true);
+	}
+	
 	public String toJSON(boolean compressed) throws JSONException, IOException{
 		JSONObject result = new JSONObject();		
 		result.put("v", BloomFilter.VERSION);

@@ -3,8 +3,11 @@ package com.dirkmoors;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -79,6 +82,21 @@ public class BloomFilterTest {
 		testBloomfilterContents(bf2, states);
 	}
 	
+//	@Test
+//	public void testJsonFromPythonLib() throws IOException, DataFormatException{
+//		BloomFilter bf = new BloomFilter(1000, 0.001);
+//		for(String state: states){
+//			bf.add(state);
+//		}
+//		
+//		String jsonFromPythonLib = readFile("res/test/jsonFromPythonLib.json", 
+//				Charset.defaultCharset());
+//		
+//		BloomFilter bf2 = BloomFilter.fromJSON(jsonFromPythonLib);		
+//		assertArrayEquals(bf2.getData(), bf.getData());
+//		//testBloomfilterContents(bf2, states);
+//	}
+	
 	private void testBloomfilterContents(BloomFilter bf, String[] expectedContents){
 		for(String candidate: expectedContents){
 			assertTrue(bf.contains(candidate) == Result.MAYBE);
@@ -131,5 +149,12 @@ public class BloomFilterTest {
 	        }
 	    }
 	    return result.toArray(new Character[result.size()]);
+	}
+	
+	private static String readFile(String path, Charset encoding) 
+			  throws IOException 
+	{
+		byte[] encoded = Files.readAllBytes(Paths.get(path));
+		return encoding.decode(ByteBuffer.wrap(encoded)).toString();
 	}
 }
