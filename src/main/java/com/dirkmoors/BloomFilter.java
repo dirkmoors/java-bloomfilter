@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.util.zip.CRC32;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
@@ -197,6 +198,8 @@ public class BloomFilter {
 			rawdata = zlibDecompress(rawdata);
 		}
 				
+		String newDataCrc = crc(rawdata);
+		logger.debug("CHECKSUM: ["+newDataCrc+"]");
 		String newDataHash = hash(rawdata);
 		
 		if(!newDataHash.equals(dataHash)){
@@ -217,6 +220,14 @@ public class BloomFilter {
 	
 	private static String hash(byte[] bytes){
 		return DigestUtils.sha256Hex(bytes);
+	}
+	
+	private static String crc(byte[] bytes){
+		CRC32 crcGen = new CRC32();
+		crcGen.update(bytes);			
+	    String hex = Long.toHexString(crcGen.getValue());
+	    return hex;
+		//return DigestUtils.
 	}
 	
 	private static BigInteger[] divmod(BigInteger x, BigInteger y){
