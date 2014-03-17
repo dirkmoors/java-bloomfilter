@@ -60,7 +60,7 @@ public class BloomFilter {
 		this.probeGenerator = (
 				probeGenerator != null ? 
 						probeGenerator : 
-						new MersennesProbeGenerator());
+						new MersenneProbeGenerator());
 		
 		this.data = data != null ? data : new long[this.numWords];
 	}
@@ -160,6 +160,8 @@ public class BloomFilter {
 		byte[] b64bytes = Base64.encodeBase64(dataBytes);	
 		String b64data = new String(b64bytes);
 		
+		String gen = this.probeGenerator.getName();
+		
 		JSONObject result = new JSONObject();		
 		result.put("v", BloomFilter.VERSION);
 		result.put("n", getIdealNumberOfElements());
@@ -167,6 +169,7 @@ public class BloomFilter {
 		result.put("zlib", compressed);
 		result.put("data", b64data);
 		result.put("hash", dataHash);
+		result.put("gen", gen);
 		return result.toString();
 	}
 	
@@ -178,8 +181,10 @@ public class BloomFilter {
 		boolean compressed = data.optBoolean("zlib");
 		String b64data = data.optString("data", null);
 		String dataHash = data.optString("hash", null);
+		String gen = data.optString("gen", null);
 		
-		if(version == null || idealNumElementsN == -1 || errorRateP == -1 || b64data == null || dataHash == null){
+		if(version == null || idealNumElementsN == -1 || errorRateP == -1 || 
+				b64data == null || dataHash == null || gen == null){
 			throw new IllegalArgumentException("Invalid BloomFilter JSON structure");
 		}
 		
@@ -200,7 +205,11 @@ public class BloomFilter {
 		
 		long[] longdata	= byteArrayToLongArray(rawdata);
 		
-		BloomFilter newBloomFilter = new BloomFilter(idealNumElementsN, errorRateP);
+		IBloomFilterProbeGenerator probeGenerator = 
+			BloomFilterProbeGenerators.getProbeGenerator(gen);
+		
+		BloomFilter newBloomFilter = new BloomFilter(
+			idealNumElementsN, errorRateP, probeGenerator);
 		newBloomFilter.data = longdata;
 		
 		return newBloomFilter;

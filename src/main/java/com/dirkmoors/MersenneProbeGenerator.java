@@ -2,17 +2,19 @@ package com.dirkmoors;
 
 import java.math.BigInteger;
 
+//http://en.wikipedia.org/wiki/Mersenne_prime
 //Source: http://stromberg.dnsalias.org/svn/bloom-filter/trunk/bloom_filter_mod.py
 
-public class MersennesProbeGenerator implements IBloomFilterProbeGenerator {
-	//http://en.wikipedia.org/wiki/Mersenne_prime
-	private static BigInteger[] MERSENNES1;
-	private static BigInteger[] MERSENNES2;
+public class MersenneProbeGenerator implements IBloomFilterProbeGenerator {
+	public static final String NAME = "MERSENNE";
 	
-	public MersennesProbeGenerator() {
-		MERSENNES1 = calculateMersennes1();
-		MERSENNES2 = calculateMersennes2();
-	}
+	private static final BigInteger[] MERSENNE1 = calculateMersenne1();
+	private static final BigInteger[] MERSENNE2 = calculateMersenne2();
+
+	@Override
+	public String getName() {
+		return MersenneProbeGenerator.NAME;
+	}	
 
 	@Override
 	public BigInteger[] getProbes(int numProbesK, int numBitsM, String data) {
@@ -21,8 +23,8 @@ public class MersennesProbeGenerator implements IBloomFilterProbeGenerator {
 			intList[i] = (int)data.charAt(i);
 		}
 		
-		BigInteger hashValue1 = MersennesProbeGenerator.hash1(intList);
-		BigInteger hashValue2 = MersennesProbeGenerator.hash2(intList);	
+		BigInteger hashValue1 = MersenneProbeGenerator.hash1(intList);
+		BigInteger hashValue2 = MersenneProbeGenerator.hash2(intList);	
 		
 		BigInteger[] probes = new BigInteger[numProbesK];
 		
@@ -51,14 +53,14 @@ public class MersennesProbeGenerator implements IBloomFilterProbeGenerator {
 	}
 	
 	private static BigInteger hash1(int[] intList){
-		return simpleHash(intList, MERSENNES1[0], MERSENNES1[1], MERSENNES1[2]);
+		return simpleHash(intList, MERSENNE1[0], MERSENNE1[1], MERSENNE1[2]);
 	}
 	
 	private static BigInteger hash2(int[] intList){
-		return simpleHash(intList, MERSENNES2[0], MERSENNES2[1], MERSENNES2[2]);
+		return simpleHash(intList, MERSENNE2[0], MERSENNE2[1], MERSENNE2[2]);
 	}
 	
-	private static BigInteger[] calculateMersennes(int[] primes){
+	private static BigInteger[] calculateMersenne(int[] primes){
 		BigInteger[] result = new BigInteger[primes.length];
 		for(int i = 0; i < primes.length; i++){
 			//Math.pow(2, primes[i]) - 1;			
@@ -68,13 +70,13 @@ public class MersennesProbeGenerator implements IBloomFilterProbeGenerator {
 		return result;
 	}
 	
-	private static BigInteger[] calculateMersennes1(){
+	private static BigInteger[] calculateMersenne1(){
 		int[] primes = new int[]{17, 31, 127};
-		return calculateMersennes(primes);
+		return calculateMersenne(primes);
 	}
 	
-	private static BigInteger[] calculateMersennes2(){
+	private static BigInteger[] calculateMersenne2(){
 		int[] primes = new int[]{19, 67, 257};
-		return calculateMersennes(primes);
-	}
+		return calculateMersenne(primes);
+	}	
 }
