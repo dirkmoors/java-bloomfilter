@@ -2,6 +2,8 @@ package com.dirkmoors;
 
 import java.math.BigInteger;
 
+//Source: http://stromberg.dnsalias.org/svn/bloom-filter/trunk/bloom_filter_mod.py
+
 public class MersennesProbeGenerator implements IBloomFilterProbeGenerator {
 	//http://en.wikipedia.org/wiki/Mersenne_prime
 	private static BigInteger[] MERSENNES1;

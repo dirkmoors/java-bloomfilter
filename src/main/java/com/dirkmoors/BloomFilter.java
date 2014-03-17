@@ -29,9 +29,7 @@ public class BloomFilter {
 	private long[] data;	
 	
 	private IBloomFilterProbeGenerator probeGenerator;
-	
-	public BloomFilter(){}
-	
+		
 	public BloomFilter(long idealNumElementsN, double errorRateP) {
 		this(idealNumElementsN, errorRateP, null);
 	}
