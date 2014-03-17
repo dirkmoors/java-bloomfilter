@@ -1,0 +1,24 @@
+-classpath
+'E:/Documents/workspaces/eclipse-android/java-bloomfilter/target/classes;E:/.m2/repository/ch/qos/logback/logback-core/1.0.13/logback-core-1.0.13.jar;E:/.m2/repository/com/fasterxml/jackson/core/jackson-core/2.3.0/jackson-core-2.3.0.jar;E:/.m2/repository/com/fasterxml/jackson/core/jackson-databind/2.3.0/jackson-databind-2.3.0.jar;E:/.m2/repository/ch/qos/logback/logback-classic/1.0.13/logback-classic-1.0.13.jar;E:/.m2/repository/org/slf4j/slf4j-api/1.7.5/slf4j-api-1.7.5.jar;E:/.m2/repository/commons-codec/commons-codec/1.9/commons-codec-1.9.jar;E:/.m2/repository/com/fasterxml/jackson/core/jackson-annotations/2.3.0/jackson-annotations-2.3.0.jar'
+-encoding
+'UTF-8'
+-protected
+-sourcepath
+'E:/Documents/workspaces/eclipse-android/java-bloomfilter/src/main/java'
+-author
+-bottom
+'Copyright &#169; 2014. All Rights Reserved.'
+-charset
+'UTF-8'
+-d
+'E:/Documents/workspaces/eclipse-android/java-bloomfilter/doc/apiDocs'
+-docencoding
+'UTF-8'
+-doctitle
+'bloomfilter 1.0.0 API'
+-linkoffline
+'http://docs.oracle.com/javase/6/docs/api' 'E:/Documents/workspaces/eclipse-android/java-bloomfilter/target/javadoc-bundle-options'
+-use
+-version
+-windowtitle
+'bloomfilter 1.0.0 API'

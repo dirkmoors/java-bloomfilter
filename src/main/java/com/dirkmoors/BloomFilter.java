@@ -1,15 +1,23 @@
 package com.dirkmoors;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.BitSet;
 import java.util.Random;
 import java.util.zip.DataFormatException;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
 
 import org.apache.commons.codec.binary.Base64;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BloomFilter {	
-	public static final int VERSION = 1;
+	private static final Logger logger = LoggerFactory.getLogger(BloomFilter.class.getName());
+	
+	public static final String VERSION = "1.0";
 	
 	private long idealNumElementsN;	
 	private double errorRateP;
@@ -125,27 +133,77 @@ public class BloomFilter {
 		return Result.MAYBE;
 	}
 	
-	public String getB64Data(boolean zlibCompressed) throws IOException{
-		ByteBuffer buf = ByteBuffer.allocate(this.data.length * 8);
-		for(long l : this.data){
-			buf.putLong(l);
-		}
-		byte[] bytes = buf.array();
+	public String toJSON(boolean compressed) throws JSONException, IOException{
+		JSONObject result = new JSONObject();		
+		result.put("v", BloomFilter.VERSION);
+		result.put("n", getIdealNumberOfElements());
+		result.put("p", getErrorRate());
+		result.put("zlib", compressed);
+		result.put("data", getB64Data(compressed));
+		return result.toString();
+	}
+	
+	private String getB64Data(boolean zlibCompressed) throws IOException{		
+		byte[] bytes = longArrayToByteArray(data);
 		if(zlibCompressed){
-			bytes = Zlib.compress(bytes);
+			bytes = zlibCompress(bytes);
 		}
 		byte[] b64bytes = Base64.encodeBase64(bytes);	
 		return new String(b64bytes);
 	}
 	
-	public void setB64Data(String b64data, boolean zlibCompressed) throws IOException, DataFormatException{
+	private void setB64Data(String b64data, boolean zlibCompressed) throws IOException, DataFormatException{
 		byte[] bytes = Base64.decodeBase64(b64data);
 		if(zlibCompressed){
-			bytes = Zlib.decompress(bytes);
-		}
-		BitSet dataSet = BitSet.valueOf(bytes);
-		long[] data	= dataSet.toLongArray();
+			bytes = zlibDecompress(bytes);
+		}		
+		long[] data	= byteArrayToLongArray(bytes);
 		this.data = data;
+	}
+	
+	public static BloomFilter fromJSON(String jsonString) throws IOException, DataFormatException{
+		JSONObject data = new JSONObject(jsonString);
+		String version = data.optString("v", null);		
+		long idealNumElementsN = data.optInt("n", -1);
+		double errorRateP = data.optDouble("p", -1);
+		boolean compressed = data.optBoolean("zlib");
+		String b64data = data.optString("data", null);
+		
+		if(version == null || idealNumElementsN == -1 || errorRateP == -1 || b64data == null){
+			throw new IllegalArgumentException("Invalid BloomFilter JSON structure");
+		}
+		
+		if(!version.equals(BloomFilter.VERSION)){
+			throw new IllegalArgumentException("Incompatible BloomFilter version");
+		}
+		
+		BloomFilter newBloomFilter = new BloomFilter(idealNumElementsN, errorRateP);
+		newBloomFilter.setB64Data(b64data, compressed);
+		
+		return newBloomFilter;
+	}
+	
+	private static byte[] longArrayToByteArray(long[] data){
+		byte[] result = new byte[data.length * 8];		
+		byte[] temp;
+		for(int i = 0; i < data.length; i++){
+			temp = ByteBuffer.allocate(8).putLong(data[i]).array();
+			System.arraycopy(temp, 0, result, i*8, 8);
+		}		
+		return result;
+	}
+	
+	private static long[] byteArrayToLongArray(byte[] data){
+		long[] result = new long[data.length / 8];		
+		byte[] slice = new byte[8];
+		int index = 0;
+		for(int i = 0; i < data.length; i+=8){
+			System.arraycopy(data, i, slice, 0, 8);
+			long nextLong = ByteBuffer.wrap(slice).getLong();
+			result[index] = nextLong;
+			index++;
+		}		
+		return result;
 	}
 	
 	private static int calculateNumBitsM(long n, double p){
@@ -162,6 +220,52 @@ public class BloomFilter {
 	
 	private static int calculateNumWords(int m){
 		return (int)Math.floor((m + 31) / 32);
+	}
+	
+	private static byte[] zlibCompress(byte[] data) throws IOException {
+		Deflater deflater = new Deflater();
+		deflater.setInput(data);
+
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream(
+				data.length);
+
+		deflater.finish();
+		byte[] buffer = new byte[1024];
+		while (!deflater.finished()) {
+			int count = deflater.deflate(buffer); // returns the generated
+													// code... index
+			outputStream.write(buffer, 0, count);
+		}
+		outputStream.close();
+		byte[] output = outputStream.toByteArray();
+
+		deflater.end();
+
+		logger.debug("Original: " + data.length / 1024 + " Kb");
+		logger.debug("Compressed: " + output.length / 1024 + " Kb");
+		return output;
+	}
+
+	private static byte[] zlibDecompress(byte[] data) throws IOException,
+			DataFormatException {
+		Inflater inflater = new Inflater();
+		inflater.setInput(data);
+
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream(
+				data.length);
+		byte[] buffer = new byte[1024];
+		while (!inflater.finished()) {
+			int count = inflater.inflate(buffer);
+			outputStream.write(buffer, 0, count);
+		}
+		outputStream.close();
+		byte[] output = outputStream.toByteArray();
+
+		inflater.end();
+
+		logger.debug("Original: " + data.length / 1024 + " Kb");
+		logger.debug("Compressed: " + output.length / 1024 + " Kb");
+		return output;
 	}
 	
 	public static enum Result{

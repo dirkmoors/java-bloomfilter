@@ -10,60 +10,73 @@ import java.util.List;
 import java.util.Random;
 import java.util.zip.DataFormatException;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.dirkmoors.BloomFilter;
 import com.dirkmoors.BloomFilter.Result;
 
-
-public class BloomFilterTests {
-	@Test 
-	public void testSerializedCopy() throws IOException, DataFormatException{
-		String[] states = ("Alabama Alaska Arizona Arkansas California " +
-				"Colorado Connecticut Delaware Florida Georgia Hawaii " +
-				"Idaho Illinois Indiana Iowa Kansas Kentucky Louisiana " +
-				"Maine Maryland Massachusetts Michigan Minnesota " +
-				"Mississippi Missouri Montana Nebraska Nevada " +
-				"NewHampshire NewJersey NewMexico NewYork NorthCarolina" +
-				"NorthDakota Ohio Oklahoma Oregon Pennsylvania RhodeIsland " +
-				"SouthCarolina SouthDakota Tennessee Texas Utah Vermont " +
-				"Virginia Washington WestVirginia Wisconsin Wyoming"
-				).split(" ");
-		
-		BloomFilter bf = new BloomFilter(1000000, 0.001);
-		for(String state: states){
-			bf.add(state);
-		}	
-		
-		long n = bf.getIdealNumberOfElements();
-		double p = bf.getErrorRate();
-		String data = bf.getB64Data(true);
-		
-		BloomFilter bf2 = new BloomFilter(n, p);
-		bf2.setB64Data(data, true);
-				
-		testBloomfilterContents(bf2, states);
-	}	
+public class BloomFilterTest {
+	@SuppressWarnings("unused")
+	private static final Logger logger = LoggerFactory.getLogger(BloomFilterTest.class.getName());
+	
+	private static final String[] states = (
+		"Alabama Alaska Arizona Arkansas California " +
+		"Colorado Connecticut Delaware Florida Georgia Hawaii " +
+		"Idaho Illinois Indiana Iowa Kansas Kentucky Louisiana " +
+		"Maine Maryland Massachusetts Michigan Minnesota " +
+		"Mississippi Missouri Montana Nebraska Nevada " +
+		"NewHampshire NewJersey NewMexico NewYork NorthCarolina" +
+		"NorthDakota Ohio Oklahoma Oregon Pennsylvania RhodeIsland " +
+		"SouthCarolina SouthDakota Tennessee Texas Utah Vermont " +
+		"Virginia Washington WestVirginia Wisconsin Wyoming"
+		).split(" ");
+	
+	@Before
+	public void setUp(){}
+	
+	@After
+	public void tearDown(){}	
 	
 	@Test
-	public void testContents(){
-		String[] states = ("Alabama Alaska Arizona Arkansas California " +
-				"Colorado Connecticut Delaware Florida Georgia Hawaii " +
-				"Idaho Illinois Indiana Iowa Kansas Kentucky Louisiana " +
-				"Maine Maryland Massachusetts Michigan Minnesota " +
-				"Mississippi Missouri Montana Nebraska Nevada " +
-				"NewHampshire NewJersey NewMexico NewYork NorthCarolina" +
-				"NorthDakota Ohio Oklahoma Oregon Pennsylvania RhodeIsland " +
-				"SouthCarolina SouthDakota Tennessee Texas Utah Vermont " +
-				"Virginia Washington WestVirginia Wisconsin Wyoming"
-				).split(" ");
-		
+	public void testContents(){		
 		BloomFilter bf = new BloomFilter(1000000, 0.001);
 		for(String state: states){
 			bf.add(state);
 		}		
 		
 		testBloomfilterContents(bf, states);
+	}
+	
+	@Test 
+	public void testJSON() throws IOException, DataFormatException{		
+		BloomFilter bf = new BloomFilter(1000000, 0.001);
+		for(String state: states){
+			bf.add(state);
+		}	
+		
+		boolean compressed = false;		
+		String bfJSON = bf.toJSON(compressed);
+				
+		BloomFilter bf2 = BloomFilter.fromJSON(bfJSON);				
+		testBloomfilterContents(bf2, states);
+	}
+	
+	@Test 
+	public void testCompressedJSON() throws IOException, DataFormatException{		
+		BloomFilter bf = new BloomFilter(1000000, 0.001);
+		for(String state: states){
+			bf.add(state);
+		}	
+		
+		boolean compressed = true;		
+		String bfJSON = bf.toJSON(compressed);
+				
+		BloomFilter bf2 = BloomFilter.fromJSON(bfJSON);				
+		testBloomfilterContents(bf2, states);
 	}
 	
 	private void testBloomfilterContents(BloomFilter bf, String[] expectedContents){

@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.dirkmoors</groupId>
 	<artifactId>bloomfilter</artifactId>
-	<version>1.0.0</version>
+	<version>1.0</version>
 	<name>bloomfilter</name>
 	<description>Simple bloomfilter for Java</description>
 		
@@ -24,7 +24,7 @@
 		<maven-surefire.threads>2</maven-surefire.threads>
 
 		<dependencies.logback.version>1.0.13</dependencies.logback.version>
-		<dependencies.jackson.version>2.3.0</dependencies.jackson.version>
+		<dependencies.json.version>20140107</dependencies.json.version>
 		<dependencies.commonscodec.version>1.9</dependencies.commonscodec.version>
 		<dependencies.junit.version>4.11</dependencies.junit.version>
 	</properties>
@@ -36,10 +36,10 @@
 			<version>${dependencies.logback.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>com.fasterxml.jackson.core</groupId>
-			<artifactId>jackson-databind</artifactId>
-			<version>${dependencies.jackson.version}</version>
-		</dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>${dependencies.json.version}</version>
+		</dependency>		            
 		<dependency>
 			<groupId>commons-codec</groupId>
 			<artifactId>commons-codec</artifactId>
@@ -83,6 +83,6 @@
 		       		<destDir>${paths.javadoc}</destDir>
 		       </configuration>
 		    </plugin>
-		</plugins>
+		</plugins>		
 	</build>
 </project>
