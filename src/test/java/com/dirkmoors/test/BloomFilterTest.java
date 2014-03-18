@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import com.dirkmoors.util.bloomfilter.BloomFilter;
 import com.dirkmoors.util.bloomfilter.BloomFilter.Result;
+import com.dirkmoors.util.bloomfilter.probegenerators.MersenneProbeGenerator;
 import com.dirkmoors.util.bloomfilter.probegenerators.MurmurProbeGenerator;
 
 public class BloomFilterTest {
@@ -47,12 +48,11 @@ public class BloomFilterTest {
 	public void tearDown(){}	
 		
 	@Test
-	public void testContents(){		
+	public void testSimple(){		
 		BloomFilter bf = new BloomFilter(1000000, 0.001);
 		for(String state: states){
 			bf.add(state);
-		}		
-		
+		}	
 		testBloomfilterContents(bf, states);
 	}
 	
@@ -64,20 +64,6 @@ public class BloomFilterTest {
 		}	
 		
 		boolean compressed = false;		
-		String bfJSON = bf.toJSON(compressed);
-				
-		BloomFilter bf2 = BloomFilter.fromJSON(bfJSON);				
-		testBloomfilterContents(bf2, states);
-	}
-	
-	@Test 
-	public void testCompressedJSON() throws IOException, DataFormatException{		
-		BloomFilter bf = new BloomFilter(1000000, 0.001);
-		for(String state: states){
-			bf.add(state);
-		}	
-		
-		boolean compressed = true;		
 		String bfJSON = bf.toJSON(compressed);
 				
 		BloomFilter bf2 = BloomFilter.fromJSON(bfJSON);				
@@ -98,14 +84,29 @@ public class BloomFilterTest {
 		testBloomfilterContents(bf2, states);
 	}
 	
+	@Test 
+	public void testMersenneProbeGenerator() throws IOException, DataFormatException{		
+		BloomFilter bf = new BloomFilter(100000, 0.001, new MersenneProbeGenerator());
+		for(String state: states){
+			bf.add(state);
+		}	
+		
+		boolean compressed = true;		
+		String bfJSON = bf.toJSON(compressed);
+				
+		BloomFilter bf2 = BloomFilter.fromJSON(bfJSON);				
+		testBloomfilterContents(bf2, states);
+	}
+	
+	
 	@Test
-	public void testJsonFromPythonLib() throws IOException, DataFormatException{
+	public void testJsonFromPythonLibMurmur() throws IOException, DataFormatException{
 		BloomFilter bf = new BloomFilter(100000, 0.001);
 		for(String state: states){
 			bf.add(state);
 		}
 		
-		String jsonFromPythonLib = readFile("res/test/jsonFromPythonLib.json", 
+		String jsonFromPythonLib = readFile("res/test/jsonFromPythonLibMurmur.json", 
 				Charset.defaultCharset());
 		
 		BloomFilter bf2 = BloomFilter.fromJSON(jsonFromPythonLib);		
@@ -114,13 +115,13 @@ public class BloomFilterTest {
 	}
 	
 	@Test
-	public void testJsonFromPythonLibMurmur() throws IOException, DataFormatException{
-		BloomFilter bf = new BloomFilter(100000, 0.001, new MurmurProbeGenerator());
+	public void testJsonFromPythonLibMersenne() throws IOException, DataFormatException{
+		BloomFilter bf = new BloomFilter(100000, 0.001, new MersenneProbeGenerator());
 		for(String state: states){
 			bf.add(state);
 		}
 		
-		String jsonFromPythonLib = readFile("res/test/jsonFromPythonLibMurmur.json", 
+		String jsonFromPythonLib = readFile("res/test/jsonFromPythonLibMersenne.json", 
 				Charset.defaultCharset());
 		
 		BloomFilter bf2 = BloomFilter.fromJSON(jsonFromPythonLib);		

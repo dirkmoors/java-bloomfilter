@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import com.dirkmoors.util.bloomfilter.probegenerators.BloomFilterProbeGenerators;
 import com.dirkmoors.util.bloomfilter.probegenerators.IBloomFilterProbeGenerator;
-import com.dirkmoors.util.bloomfilter.probegenerators.MersenneProbeGenerator;
+import com.dirkmoors.util.bloomfilter.probegenerators.MurmurProbeGenerator;;
 
 public class BloomFilter {	
 	private static final Logger logger = LoggerFactory.getLogger(BloomFilter.class.getName());
@@ -65,7 +65,7 @@ public class BloomFilter {
 		this.probeGenerator = (
 				probeGenerator != null ? 
 						probeGenerator : 
-						new MersenneProbeGenerator());
+						new MurmurProbeGenerator());
 		
 		this.data = data != null ? data : new long[this.numWords];
 	}
