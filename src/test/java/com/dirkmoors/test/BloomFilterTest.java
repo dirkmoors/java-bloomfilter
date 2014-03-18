@@ -25,9 +25,10 @@ import com.dirkmoors.util.bloomfilter.BloomFilter.Result;
 import com.dirkmoors.util.bloomfilter.probegenerators.MersenneProbeGenerator;
 import com.dirkmoors.util.bloomfilter.probegenerators.MurmurProbeGenerator;
 
-public class BloomFilterTest {
-	@SuppressWarnings("unused")
+public class BloomFilterTest {	
 	private static final Logger logger = LoggerFactory.getLogger(BloomFilterTest.class.getName());
+	
+	private static final double ERROR_RATE = 0.001;
 	
 	private static final String[] states = (
 		"Alabama Alaska Arizona Arkansas California " +
@@ -41,24 +42,24 @@ public class BloomFilterTest {
 		"Virginia Washington WestVirginia Wisconsin Wyoming"
 		).split(" ");
 	
+	private static BloomFilter englishWordsBloomfilter = prepareEnglishWordsBloomFilter(100000, 0.0001); //0.01% error
+	private static String[] englishWords = readEnglishWords(5000);
+	
 	@Before
-	public void setUp(){}
+	public void setUp() throws IOException{}
 	
 	@After
 	public void tearDown(){}	
 		
 	@Test
-	public void testSimple(){		
-		BloomFilter bf = new BloomFilter(1000000, 0.001);
-		for(String state: states){
-			bf.add(state);
-		}	
-		testBloomfilterContents(bf, states);
+	public void testMassiveAmount(){	
+		testBloomfilterContents(
+			englishWordsBloomfilter, englishWords, ERROR_RATE);
 	}
 	
 	@Test 
 	public void testJSON() throws IOException, DataFormatException{		
-		BloomFilter bf = new BloomFilter(1000000, 0.001);
+		BloomFilter bf = new BloomFilter(1000000, ERROR_RATE);
 		for(String state: states){
 			bf.add(state);
 		}	
@@ -67,12 +68,12 @@ public class BloomFilterTest {
 		String bfJSON = bf.toJSON(compressed);
 				
 		BloomFilter bf2 = BloomFilter.fromJSON(bfJSON);				
-		testBloomfilterContents(bf2, states);
+		testBloomfilterContents(bf2, states, ERROR_RATE);
 	}
 	
 	@Test 
 	public void testMurmurProbeGenerator() throws IOException, DataFormatException{		
-		BloomFilter bf = new BloomFilter(100000, 0.001, new MurmurProbeGenerator());
+		BloomFilter bf = new BloomFilter(100000, ERROR_RATE, new MurmurProbeGenerator());
 		for(String state: states){
 			bf.add(state);
 		}	
@@ -81,12 +82,12 @@ public class BloomFilterTest {
 		String bfJSON = bf.toJSON(compressed);
 				
 		BloomFilter bf2 = BloomFilter.fromJSON(bfJSON);				
-		testBloomfilterContents(bf2, states);
+		testBloomfilterContents(bf2, states, ERROR_RATE);
 	}
 	
 	@Test 
 	public void testMersenneProbeGenerator() throws IOException, DataFormatException{		
-		BloomFilter bf = new BloomFilter(100000, 0.001, new MersenneProbeGenerator());
+		BloomFilter bf = new BloomFilter(100000, ERROR_RATE, new MersenneProbeGenerator());
 		for(String state: states){
 			bf.add(state);
 		}	
@@ -95,13 +96,12 @@ public class BloomFilterTest {
 		String bfJSON = bf.toJSON(compressed);
 				
 		BloomFilter bf2 = BloomFilter.fromJSON(bfJSON);				
-		testBloomfilterContents(bf2, states);
-	}
-	
+		testBloomfilterContents(bf2, states, ERROR_RATE);
+	}	
 	
 	@Test
 	public void testJsonFromPythonLibMurmur() throws IOException, DataFormatException{
-		BloomFilter bf = new BloomFilter(100000, 0.001);
+		BloomFilter bf = new BloomFilter(100000, ERROR_RATE);
 		for(String state: states){
 			bf.add(state);
 		}
@@ -111,12 +111,12 @@ public class BloomFilterTest {
 		
 		BloomFilter bf2 = BloomFilter.fromJSON(jsonFromPythonLib);		
 		assertArrayEquals(bf2.getData(), bf.getData());
-		testBloomfilterContents(bf2, states);
+		testBloomfilterContents(bf2, states, ERROR_RATE);
 	}
 	
 	@Test
 	public void testJsonFromPythonLibMersenne() throws IOException, DataFormatException{
-		BloomFilter bf = new BloomFilter(100000, 0.001, new MersenneProbeGenerator());
+		BloomFilter bf = new BloomFilter(100000, ERROR_RATE, new MersenneProbeGenerator());
 		for(String state: states){
 			bf.add(state);
 		}
@@ -126,10 +126,10 @@ public class BloomFilterTest {
 		
 		BloomFilter bf2 = BloomFilter.fromJSON(jsonFromPythonLib);		
 		assertArrayEquals(bf2.getData(), bf.getData());
-		testBloomfilterContents(bf2, states);
+		testBloomfilterContents(bf2, states, ERROR_RATE);
 	}
 	
-	private void testBloomfilterContents(BloomFilter bf, String[] expectedContents){
+	private void testBloomfilterContents(BloomFilter bf, String[] expectedContents, double maxErrorRate){
 		for(String candidate: expectedContents){
 			assertTrue(bf.contains(candidate) == Result.MAYBE);
 		}
@@ -138,6 +138,8 @@ public class BloomFilterTest {
 		
 		int trials = 100000;
 		String candidate;
+		double count = 0;
+		double errors = 0;
 		for(int trial = 0; trial < trials; trial++){
 			while(true){
 				candidate = sample(allChars, 5);
@@ -145,10 +147,16 @@ public class BloomFilterTest {
 					//If we accidentally found a real state, try again
 					continue;
 				}
-				assertTrue(bf.contains(candidate) == Result.NO);
+				count += 1;
+				if(bf.contains(candidate) != Result.NO){
+					errors++;
+				}
 				break;
 			}
 		}
+		double errorRate = (errors / count);
+		assertTrue(errorRate <= maxErrorRate);
+		logger.debug("testBloomfilterContents: errorPct: "+(errorRate*100.0)+" %");
 	}
 	
 	private static boolean inArray(String[] dataset, String data){
@@ -188,5 +196,36 @@ public class BloomFilterTest {
 	{
 		byte[] encoded = Files.readAllBytes(Paths.get(path));
 		return encoding.decode(ByteBuffer.wrap(encoded)).toString().trim();
+	}
+	
+	private static String[] readEnglishWords(int maxNrWords){
+		String path = "res/test/english-words.txt";
+		String data = null;
+		try {
+			data = readFile(path, Charset.defaultCharset());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		if(data == null)return null;		
+		String[] words = data.split("\n");
+		
+		if(maxNrWords > words.length){
+			maxNrWords = words.length;
+		}
+		
+		String[] result = new String[maxNrWords];
+		for(int i = 0; i < maxNrWords; i++){
+			result[i] = words[i].trim();
+		}
+		return result;
+	}
+	
+	private static BloomFilter prepareEnglishWordsBloomFilter(int maxNrWords, double errorRate){
+		String[] englishWords = readEnglishWords(maxNrWords);
+		BloomFilter bf = new BloomFilter(englishWords.length, errorRate);
+		for(String word: englishWords){
+			bf.add(word);
+		}
+		return bf;
 	}
 }

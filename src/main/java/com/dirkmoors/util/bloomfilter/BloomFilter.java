@@ -157,7 +157,7 @@ public class BloomFilter {
 	public String toJSON(boolean compressed) throws JSONException, IOException{		
 		byte[] dataBytes = longArrayToByteArray(data);
 		
-		String dataHash = hash(dataBytes);
+		String dataHash = makeHash(dataBytes);
 		
 		if(compressed){
 			dataBytes = zlibCompress(dataBytes);
@@ -204,7 +204,7 @@ public class BloomFilter {
 				
 		String newDataCrc = crc(rawdata);
 		logger.debug("CHECKSUM: ["+newDataCrc+"]");
-		String newDataHash = hash(rawdata);
+		String newDataHash = makeHash(rawdata);
 		
 		if(!newDataHash.equals(dataHash)){
 			throw new IllegalArgumentException("Data integrity error");
@@ -222,7 +222,7 @@ public class BloomFilter {
 		return newBloomFilter;
 	}
 	
-	private static String hash(byte[] bytes){
+	private static String makeHash(byte[] bytes){
 		return DigestUtils.sha256Hex(bytes);
 	}
 	
