@@ -1,4 +1,4 @@
-package com.dirkmoors;
+package com.dirkmoors.util.bloomfilter.probegenerators;
 
 import java.math.BigInteger;
 

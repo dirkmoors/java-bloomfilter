@@ -1,4 +1,4 @@
-package com.dirkmoors;
+package com.dirkmoors.test;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
@@ -20,7 +20,9 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.dirkmoors.BloomFilter.Result;
+import com.dirkmoors.util.bloomfilter.BloomFilter;
+import com.dirkmoors.util.bloomfilter.BloomFilter.Result;
+import com.dirkmoors.util.bloomfilter.probegenerators.MurmurProbeGenerator;
 
 public class BloomFilterTest {
 	@SuppressWarnings("unused")
@@ -71,6 +73,20 @@ public class BloomFilterTest {
 	@Test 
 	public void testCompressedJSON() throws IOException, DataFormatException{		
 		BloomFilter bf = new BloomFilter(1000000, 0.001);
+		for(String state: states){
+			bf.add(state);
+		}	
+		
+		boolean compressed = true;		
+		String bfJSON = bf.toJSON(compressed);
+				
+		BloomFilter bf2 = BloomFilter.fromJSON(bfJSON);				
+		testBloomfilterContents(bf2, states);
+	}
+	
+	@Test 
+	public void testMurmurProbeGenerator() throws IOException, DataFormatException{		
+		BloomFilter bf = new BloomFilter(1000000, 0.001, new MurmurProbeGenerator());
 		for(String state: states){
 			bf.add(state);
 		}	

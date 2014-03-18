@@ -1,4 +1,4 @@
-package com.dirkmoors;
+package com.dirkmoors.util.bloomfilter;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -15,6 +15,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.dirkmoors.util.bloomfilter.probegenerators.BloomFilterProbeGenerators;
+import com.dirkmoors.util.bloomfilter.probegenerators.IBloomFilterProbeGenerator;
+import com.dirkmoors.util.bloomfilter.probegenerators.MersenneProbeGenerator;
 
 public class BloomFilter {	
 	private static final Logger logger = LoggerFactory.getLogger(BloomFilter.class.getName());
