@@ -86,7 +86,7 @@ public class BloomFilterTest {
 	
 	@Test 
 	public void testMurmurProbeGenerator() throws IOException, DataFormatException{		
-		BloomFilter bf = new BloomFilter(1000000, 0.001, new MurmurProbeGenerator());
+		BloomFilter bf = new BloomFilter(100000, 0.001, new MurmurProbeGenerator());
 		for(String state: states){
 			bf.add(state);
 		}	
@@ -106,6 +106,21 @@ public class BloomFilterTest {
 		}
 		
 		String jsonFromPythonLib = readFile("res/test/jsonFromPythonLib.json", 
+				Charset.defaultCharset());
+		
+		BloomFilter bf2 = BloomFilter.fromJSON(jsonFromPythonLib);		
+		assertArrayEquals(bf2.getData(), bf.getData());
+		testBloomfilterContents(bf2, states);
+	}
+	
+	@Test
+	public void testJsonFromPythonLibMurmur() throws IOException, DataFormatException{
+		BloomFilter bf = new BloomFilter(100000, 0.001, new MurmurProbeGenerator());
+		for(String state: states){
+			bf.add(state);
+		}
+		
+		String jsonFromPythonLib = readFile("res/test/jsonFromPythonLibMurmur.json", 
 				Charset.defaultCharset());
 		
 		BloomFilter bf2 = BloomFilter.fromJSON(jsonFromPythonLib);		

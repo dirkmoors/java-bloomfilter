@@ -48,7 +48,8 @@ public class MurmurProbeGenerator implements IBloomFilterProbeGenerator {
 				k |= (data[i + 3] & 0xFF) << 24;
 
 				k *= m;
-				k ^= k >>> r;
+				int msk = k >>> r;
+				k ^= msk;
 				k *= m;
 
 				h *= m;
@@ -76,6 +77,8 @@ public class MurmurProbeGenerator implements IBloomFilterProbeGenerator {
 			if (lastHash != -1) {
 				positions[hashes++] = BigInteger.valueOf(lastHash);
 			}
+			/*lastHash = Math.abs(h) % numBitsM;
+			positions[hashes++] = BigInteger.valueOf(lastHash);*/
 		}
 		return positions;
 	}
